@@ -59,6 +59,12 @@ const activityConfig: Record<string, { title: string; description: string; icon:
     description: 'Explored community hub',
     icon: 'Users',
     gradient: 'bg-gradient-to-br from-teal-500 to-cyan-600'
+  },
+  '/book-library': {
+    title: 'Browsed Library',
+    description: 'Explored book library',
+    icon: 'Book',
+    gradient: 'bg-gradient-to-br from-emerald-500 to-green-600'
   }
 };
 

@@ -9,6 +9,7 @@ import { db } from '../lib/firebaseConfig';
 import { collection, addDoc, getDocs, query, orderBy, updateDoc, doc, increment } from 'firebase/firestore';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { PDFViewer } from '../components/PDFViewer';
+import { addActivity } from '../utils/activityTracker';
 
 interface BookLibraryProps {
   user: any;
@@ -27,11 +28,12 @@ export function BookLibrary({ user }: BookLibraryProps) {
 
   useEffect(() => {
     loadBooks();
+    addActivity('/book-library');
   }, []);
 
   useEffect(() => {
     filterBooks();
-  }, [searchQuery, books]);
+  }, [searchQuery, books, sortBy]);
 
   const loadBooks = async () => {
     try {
@@ -53,19 +55,33 @@ export function BookLibrary({ user }: BookLibraryProps) {
   };
 
   const filterBooks = () => {
-    if (!searchQuery.trim()) {
-      setFilteredBooks(books);
-      return;
+    let filtered = books;
+
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = books.filter(
+        (book) =>
+          book.bookName.toLowerCase().includes(query) ||
+          book.author.toLowerCase().includes(query) ||
+          book.description?.toLowerCase().includes(query) || ''
+      );
     }
 
-    const query = searchQuery.toLowerCase();
-    const filtered = books.filter(
-      (book) =>
-        book.bookName.toLowerCase().includes(query) ||
-        book.author.toLowerCase().includes(query) ||
-        book.description.toLowerCase().includes(query)
-    );
-    setFilteredBooks(filtered);
+    const sorted = [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case 'name':
+          return a.bookName.localeCompare(b.bookName);
+        case 'views':
+          return b.views - a.views;
+        case 'downloads':
+          return b.downloads - a.downloads;
+        case 'date':
+        default:
+          return new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime();
+      }
+    });
+
+    setFilteredBooks(sorted);
   };
 
   const convertGoogleDriveUrl = (url: string, isImage: boolean = false): string => {
@@ -121,6 +137,10 @@ export function BookLibrary({ user }: BookLibraryProps) {
       e.preventDefault();
       e.stopPropagation();
     }
+
+    setSelectedBook(book);
+    setViewerOpen(true);
+
     try {
       const bookRef = doc(db, 'books', book.id);
       await updateDoc(bookRef, {
@@ -128,9 +148,6 @@ export function BookLibrary({ user }: BookLibraryProps) {
       });
 
       setBooks(books.map(b => b.id === book.id ? { ...b, views: b.views + 1 } : b));
-
-      setSelectedBook(book);
-      setViewerOpen(true);
     } catch (error) {
       console.error('Error updating views:', error);
     }
@@ -206,19 +223,7 @@ export function BookLibrary({ user }: BookLibraryProps) {
     );
   }
 
-  const sortedBooks = [...filteredBooks].sort((a, b) => {
-    switch (sortBy) {
-      case 'name':
-        return a.bookName.localeCompare(b.bookName);
-      case 'views':
-        return b.views - a.views;
-      case 'downloads':
-        return b.downloads - a.downloads;
-      case 'date':
-      default:
-        return new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime();
-    }
-  });
+  const sortedBooks = filteredBooks;
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-6">

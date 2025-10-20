@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Beaker, FileText, History, Book, Settings, Lightbulb, Printer, TrendingUp, HelpCircle, Heart, MessageCircle, Package, ShoppingCart, BarChart3, Users, ArrowRight, Sparkles, Zap, Shield, CheckCircle2, ChevronLeft, ChevronRight, Activity, Clock, Award, Target, Search, X, Home } from 'lucide-react';
+import { Beaker, FileText, History, Book, Settings, Lightbulb, Printer, TrendingUp, HelpCircle, Heart, MessageCircle, Package, ShoppingCart, BarChart3, Users, ArrowRight, Sparkles, Zap, Shield, CheckCircle2, ChevronLeft, ChevronRight, Activity, Clock, Award, Target, Search, X, Home, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ComprehensiveDashboard } from '../components/ComprehensiveDashboard';
 import { auth } from '../lib/firebaseConfig';
@@ -72,7 +72,8 @@ const iconMap: Record<string, React.ElementType> = {
   Settings,
   Users,
   History,
-  Book
+  Book,
+  BookOpen
 };
 
 const RecentActivityItem = ({ icon: iconName, title, description, time, gradient }: { icon: string, title: string, description: string, time: string, gradient: string }) => {
@@ -222,6 +223,7 @@ export function LandingPage() {
     { icon: Beaker, title: "Dyeing Calculator", description: "Calculate precise chemical quantities with AI-powered recommendations for optimal results.", path: "/dyeing-calculator", color: "primary", gradient: "bg-gradient-to-br from-blue-500 to-blue-600" },
     { icon: FileText, title: "Proforma Invoice", description: "Generate professional invoices with automated calculations and customizable templates.", path: "/proforma-invoice", color: "secondary", gradient: "bg-gradient-to-br from-orange-500 to-orange-600" },
     { icon: Book, title: "Recipe Library", description: "Access your complete dyeing recipe database with advanced search and filtering.", path: "/manage-recipes", color: "accent", gradient: "bg-gradient-to-br from-green-500 to-green-600" },
+    { icon: BookOpen, title: "Book Library", description: "Browse and share technical books, manuals, and industry resources with the community.", path: "/book-library", color: "primary", gradient: "bg-gradient-to-br from-emerald-500 to-green-600" },
     { icon: Package, title: "Smart Inventory", description: "Real-time inventory tracking with automatic reorder alerts and waste analysis.", path: "/inventory", color: "primary", gradient: "bg-gradient-to-br from-teal-500 to-teal-600" },
     { icon: ShoppingCart, title: "Order Pipeline", description: "Manage orders from receipt to delivery with integrated production workflows.", path: "/order-management", color: "secondary", gradient: "bg-gradient-to-br from-blue-500 to-cyan-600" },
     { icon: BarChart3, title: "Production Hub", description: "Record and analyze production data across all departments with detailed insights.", path: "/production-data", color: "accent", gradient: "bg-gradient-to-br from-purple-500 to-purple-600" },

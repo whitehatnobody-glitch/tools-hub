@@ -27,9 +27,7 @@ export function PDFViewer({ pdfUrl, title, onDownload }: PDFViewerProps) {
   };
 
   const handleIframeLoad = () => {
-    setTimeout(() => {
-      setLoading(false);
-    }, 500);
+    setLoading(false);
   };
 
   const handleIframeError = () => {
