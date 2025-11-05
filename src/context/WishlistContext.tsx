@@ -1,6 +1,4 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
-import { collection, doc, setDoc, deleteDoc, onSnapshot, query, where } from 'firebase/firestore';
-import { db } from '../config/firebase';
 import { useAuth } from './AuthContext';
 import { WishlistItem, Product } from '../types';
 
@@ -52,44 +50,93 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    dispatch({ type: 'SET_LOADING', payload: true });
-
-    const wishlistQuery = query(
-      collection(db, 'wishlists'),
-      where('userId', '==', authState.user.id)
-    );
-
-    const unsubscribe = onSnapshot(wishlistQuery, (snapshot) => {
-      const wishlistItems: WishlistItem[] = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        wishlistItems.push({
-          product: data.product,
-          addedAt: data.addedAt.toDate()
-        });
-      });
-      dispatch({ type: 'SET_ITEMS', payload: wishlistItems });
-    });
-
-    return () => unsubscribe();
+    loadWishlist();
   }, [authState.isAuthenticated, authState.user]);
 
-  const addToWishlist = async (product: Product) => {
+  const loadWishlist = async () => {
     if (!authState.user) return;
 
-    try {
-      const wishlistItem: WishlistItem = {
-        product,
-        addedAt: new Date()
-      };
+    dispatch({ type: 'SET_LOADING', payload: true });
 
-      await setDoc(doc(db, 'wishlists', `${authState.user.id}_${product.id}`), {
-        userId: authState.user.id,
-        product,
-        addedAt: new Date()
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      if (!supabaseUrl || !supabaseKey) {
+        console.error('Supabase credentials not configured');
+        dispatch({ type: 'SET_ITEMS', payload: [] });
+        return;
+      }
+
+      const response = await fetch(`${supabaseUrl}/rest/v1/wishlists?user_id=eq.${authState.user.id}&select=*`, {
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json'
+        }
       });
 
-      dispatch({ type: 'ADD_ITEM', payload: wishlistItem });
+      if (response.ok) {
+        const data = await response.json();
+        const wishlistItems: WishlistItem[] = data.map((item: any) => ({
+          product: item.product_data,
+          addedAt: new Date(item.added_at)
+        }));
+        dispatch({ type: 'SET_ITEMS', payload: wishlistItems });
+      } else {
+        dispatch({ type: 'SET_ITEMS', payload: [] });
+      }
+    } catch (error) {
+      console.error('Error loading wishlist:', error);
+      dispatch({ type: 'SET_ITEMS', payload: [] });
+    }
+  };
+
+  const addToWishlist = async (product: Product) => {
+    if (!authState.user) {
+      console.warn('User must be authenticated to add to wishlist');
+      return;
+    }
+
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      if (!supabaseUrl || !supabaseKey) {
+        console.error('Supabase credentials not configured');
+        return;
+      }
+
+      const wishlistItem = {
+        user_id: authState.user.id,
+        product_id: product.id,
+        product_data: product,
+        added_at: new Date().toISOString()
+      };
+
+      const response = await fetch(`${supabaseUrl}/rest/v1/wishlists`, {
+        method: 'POST',
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify(wishlistItem)
+      });
+
+      if (response.ok) {
+        dispatch({
+          type: 'ADD_ITEM',
+          payload: {
+            product,
+            addedAt: new Date()
+          }
+        });
+      } else {
+        const errorText = await response.text();
+        console.error('Error adding to wishlist:', errorText);
+      }
     } catch (error) {
       console.error('Error adding to wishlist:', error);
     }
@@ -99,8 +146,31 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     if (!authState.user) return;
 
     try {
-      await deleteDoc(doc(db, 'wishlists', `${authState.user.id}_${productId}`));
-      dispatch({ type: 'REMOVE_ITEM', payload: productId });
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      if (!supabaseUrl || !supabaseKey) {
+        console.error('Supabase credentials not configured');
+        return;
+      }
+
+      const response = await fetch(
+        `${supabaseUrl}/rest/v1/wishlists?user_id=eq.${authState.user.id}&product_id=eq.${productId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (response.ok) {
+        dispatch({ type: 'REMOVE_ITEM', payload: productId });
+      } else {
+        console.error('Error removing from wishlist');
+      }
     } catch (error) {
       console.error('Error removing from wishlist:', error);
     }
@@ -111,12 +181,12 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <WishlistContext.Provider value={{ 
-      state, 
-      dispatch, 
-      addToWishlist, 
-      removeFromWishlist, 
-      isInWishlist 
+    <WishlistContext.Provider value={{
+      state,
+      dispatch,
+      addToWishlist,
+      removeFromWishlist,
+      isInWishlist
     }}>
       {children}
     </WishlistContext.Provider>
